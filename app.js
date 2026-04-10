@@ -5,6 +5,10 @@ window.onerror = function (msg, url, linha, col, erro) {
     alert('ERRO: ' + msg + '\nLinha: ' + linha);
     return false;
 };
+
+// === URL DO GOOGLE SHEETS ===
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz-wu5XJGb-LyoFhiJi-2aCjyeTuhYsVLPfi_Qu8RMKE5mVRvnhblvDN4i-nLj_lddy/exec';
+
 // === DADOS DAS FAZENDAS E TALHÕES ===
 const FAZENDAS_TALHOES = {
     "Ponta da Mata": ["PR04", "PRC", "SR01", "PM02", "AL02", "SZ01"],
@@ -130,13 +134,13 @@ function getAvaliador() {
     }
     return sel || 'Não informado';
 }
+
 function iniciarAvaliacao() {
     document.getElementById('fazenda').value = '';
     document.getElementById('talhao').innerHTML = '<option value="">Selecione a fazenda primeiro...</option>';
     document.getElementById('talhao').disabled = true;
     document.getElementById('variedade').value = '';
     document.getElementById('estadio').value = '';
-    //document.getElementById('pontoAmostragem').value = 'P1';
     document.getElementById('numPlantas').value = 10;
     mostrarTela('telaConfig');
 }
@@ -144,15 +148,13 @@ function iniciarAvaliacao() {
 function iniciarColeta() {
     const fazenda = document.getElementById('fazenda').value;
     const talhao = document.getElementById('talhao').value;
-    //const ponto = document.getElementById('pontoAmostragem').value.trim();
     const ponto = 'geral';
     const numPlantas = parseInt(document.getElementById('numPlantas').value);
     const avaliador = getAvaliador();
 
-    if (avaliador === 'Não informado') { showToast('Selecione o avaliador!');return; }
+    if (avaliador === 'Não informado') { toast('⚠️ Selecione o avaliador!'); return; }
     if (!fazenda) { toast('⚠️ Selecione a fazenda!'); return; }
     if (!talhao) { toast('⚠️ Selecione o talhão!'); return; }
-   // if (!ponto) { toast('⚠️ Informe o ponto!'); return; }
     if (!numPlantas || numPlantas < 1) { toast('⚠️ Informe o nº de plantas!'); return; }
 
     avaliacaoAtual = {
@@ -290,12 +292,94 @@ function finalizarAvaliacao() {
         numPlantas: avaliacaoAtual.numPlantas,
         dataInicio: avaliacaoAtual.dataInicio,
         dataFim: new Date().toISOString(),
-        plantas: avaliacaoAtual.plantas
+        plantas: avaliacaoAtual.plantas,
+        avaliador: avaliacaoAtual.avaliador
     };
 
     salvarNoHistorico(avaliacao);
+    enviarParaGoogleSheets(avaliacao);
     exibirResumo(avaliacao);
     mostrarTela('telaResumo');
+}
+
+// ============================================
+//   GOOGLE SHEETS — ENVIO
+// ============================================
+function enviarParaGoogleSheets(avaliacao) {
+    const payload = {
+        data: formatarData(avaliacao.dataInicio),
+        avaliador: avaliacao.avaliador,
+        fazenda: avaliacao.fazenda,
+        talhao: avaliacao.talhao,
+        variedade: avaliacao.variedade,
+        estadio: avaliacao.estadio,
+        plantas: avaliacao.plantas.map(p => ({
+            numero: p.numero,
+            brocaViva: p.brocaViva || 0,
+            brocaMorta: p.brocaMorta || 0,
+            totalGraos: p.totalGraos || 0,
+            bmAdulto: p.bmAdulto || 0,
+            bmLarva: p.bmLarva || 0,
+            bmOvo: p.bmOvo || 0,
+            folhasMinadas: p.folhasMinas || 0,
+            totalFolhas: p.totalFolhas || 0,
+            acaroVermelho: p.acaroVerm || 0,
+            ferrugem: p.ferrugem || 0,
+            cercospora: p.cercospora || 0,
+            phoma: p.phoma || 0,
+            observacoes: p.observacoes || ''
+        }))
+    };
+
+    fetch(GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(() => {
+        toast('☁️ Dados enviados para Google Sheets!');
+        marcarComoSincronizado(avaliacao.id);
+    })
+    .catch(err => {
+        console.error('Erro ao enviar:', err);
+        toast('⚠️ Sem internet. Dados salvos localmente.');
+        marcarComoNaoSincronizado(avaliacao.id);
+    });
+}
+
+function marcarComoSincronizado(id) {
+    const hist = getHistorico();
+    const av = hist.find(a => a.id === id);
+    if (av) {
+        av.sincronizado = true;
+        localStorage.setItem('mipCafeHistorico', JSON.stringify(hist));
+    }
+}
+
+function marcarComoNaoSincronizado(id) {
+    const hist = getHistorico();
+    const av = hist.find(a => a.id === id);
+    if (av) {
+        av.sincronizado = false;
+        localStorage.setItem('mipCafeHistorico', JSON.stringify(hist));
+    }
+}
+
+function sincronizarPendentes() {
+    const hist = getHistorico();
+    const pendentes = hist.filter(a => a.sincronizado === false);
+    
+    if (pendentes.length === 0) {
+        toast('✅ Tudo sincronizado!');
+        return;
+    }
+
+    toast(`☁️ Sincronizando ${pendentes.length} avaliação(ões)...`);
+    
+    pendentes.forEach(av => {
+        enviarParaGoogleSheets(av);
+    });
 }
 
 // ============================================
@@ -324,18 +408,23 @@ function exibirResumo(av) {
     const plantasLimpas = av.plantas.filter(p => p.limpa).length;
     const dataFormatada = formatarData(av.dataInicio);
 
+    // Status de sincronização
+    const syncStatus = av.sincronizado === true ? '☁️ Sincronizado' : 
+                       av.sincronizado === false ? '⚠️ Pendente' : '';
+
     let h = '';
 
     // Info Geral
     h += `<div class="resumo-card"><h3>📋 Informações Gerais</h3>`;
     h += ri('Data', dataFormatada);
+    h += ri('Avaliador', av.avaliador || '—');
     h += ri('Fazenda', av.fazenda);
     h += ri('Talhão', av.talhao);
     h += ri('Variedade', av.variedade || '—');
     h += ri('Estádio', av.estadio || '—');
-   // h += ri('Ponto', av.ponto);
     h += ri('Plantas avaliadas', n);
     h += ri('Plantas limpas', `${plantasLimpas} (${((plantasLimpas/n)*100).toFixed(0)}%)`, 'ok');
+    if (syncStatus) h += ri('Nuvem', syncStatus);
     h += `</div>`;
 
     // Broca
@@ -403,31 +492,6 @@ function ri(rotulo, valor, cls) {
 }
 
 // ============================================
-//   NOVO PONTO MESMO TALHÃO
-// ============================================
-/*function novoPontoMesmoTalhao() {
-    const pontoAtual = avaliacaoAtual.ponto;
-    const match = pontoAtual.match(/^(.*?)(\d+)$/);
-    let novoPonto;
-    if (match) {
-        novoPonto = match[1] + (parseInt(match[2]) + 1);
-    } else {
-        novoPonto = pontoAtual + '_2';
-    }
-
-    document.getElementById('pontoAmostragem').value = novoPonto;
-    document.getElementById('fazenda').value = avaliacaoAtual.fazenda;
-    atualizarTalhoes();
-    setTimeout(() => {
-        document.getElementById('talhao').value = avaliacaoAtual.talhao;
-    }, 50);
-
-    mostrarTela('telaConfig');
-    toast(`📍 Ponto → ${novoPonto}`);
-}
-*/
-
-// ============================================
 //   HISTÓRICO (localStorage)
 // ============================================
 function getHistorico() {
@@ -451,14 +515,16 @@ function abrirHistorico() {
         let html = '';
         hist.slice().reverse().forEach((av, i) => {
             const idx = hist.length - 1 - i;
+            const syncIcon = av.sincronizado === true ? '☁️' : 
+                           av.sincronizado === false ? '⚠️' : '📱';
             html += `
                 <div class="hist-card" onclick="verDetalheHistorico(${idx})">
                     <div class="hist-card-header">
-                        <h4>${av.fazenda} — ${av.talhao}</h4>
+                        <h4>${syncIcon} ${av.fazenda} — ${av.talhao}</h4>
                         <span class="data">${formatarData(av.dataInicio)}</span>
                     </div>
                     <div class="hist-card-info">
-                        🌱 ${av.numPlantas} plantas · ${av.variedade || '—'} · ${av.estadio || '—'}
+                        👤 ${av.avaliador || '—'} · 🌱 ${av.numPlantas} plantas · ${av.variedade || '—'}
                     </div>
                 </div>`;
         });
@@ -493,7 +559,6 @@ function exportarCSV() {
     if (hist.length === 0) { toast('Nenhum dado para exportar'); return; }
     const av = hist[hist.length - 1];
     baixarCSV(gerarCSVUnico(av), `MIP_${av.fazenda}_${av.talhao}.csv`);
-
 }
 
 function exportarTudo() {
@@ -510,7 +575,7 @@ function exportarTudo() {
 
     hist.forEach(av => {
         av.plantas.forEach(p => {
-            csv += `${av.fazenda};${av.talhao};${av.variedade};${av.estadio};${p.numero};${formatarData(p.timestamp)};`;
+            csv += `${av.avaliador||''};${av.fazenda};${av.talhao};${av.variedade};${av.estadio};${p.numero};${formatarData(p.timestamp)};`;
             csv += `${p.brocaViva};${p.brocaMorta};${p.totalGraos};`;
             csv += `${p.bmAdulto};${p.bmLarva};${p.bmOvo};${p.folhasMinas};${p.totalFolhas};`;
             csv += `${p.acaroVerm};${p.acaroLepr};${p.lagarta};${p.cochonilha||0};${p.cigarra||0};${p.outraPragaNome||''};${p.outraPragaQtd};`;
@@ -575,7 +640,7 @@ function compartilharWhatsApp() {
 
     let m = `☕ *MIP CAFÉ — Relatório*\n`;
     m += `📅 ${formatarData(av.dataInicio)}\n`;
-    m += `👤 *Avaliador:* ${av.avaliador || getAvaliador()}\n` ;
+    m += `👤 *Avaliador:* ${av.avaliador || '—'}\n`;
     m += `🏡 *${av.fazenda}* — *${av.talhao}*\n`;
     m += `🌱 ${av.variedade || '—'} · ${av.estadio || '—'}\n`;
     m += `🌱 ${n} plantas avaliadas\n`;
