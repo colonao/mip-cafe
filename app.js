@@ -7,7 +7,7 @@ window.onerror = function (msg, url, linha, col, erro) {
 };
 
 // === URL DO GOOGLE SHEETS ===
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz-wu5XJGb-LyoFhiJi-2aCjyeTuhYsVLPfi_Qu8RMKE5mVRvnhblvDN4i-nLj_lddy/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw8ABi5-J1oJOdz9K3opHd7AJ2n7f9DtHMqxAUiSmo/dev';
 
 // === DADOS DAS FAZENDAS E TALHÕES ===
 const FAZENDAS_TALHOES = {
