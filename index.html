@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="brown">
+    <title>MIP Café v1.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ========== TELA INICIAL ========== -->
+<div id="telaInicial" class="tela ativa">
+    <div class="container">
+        <div class="logo-box">
+            <div class="logo-icone">☕</div>
+            <h1>MIP Café</h1>
+            <p class="versao">v1.0 — Monitoramento Integrado de Pragas</p>
+        </div>
+
+        <div class="menu-principal">
+            <button class="btn btn-grande btn-primario" onclick="iniciarAvaliacao()">
+                <span class="btn-icone">📋</span>
+                <span class="btn-texto">Nova Avaliação</span>
+            </button>
+            <button class="btn btn-grande btn-secundario" onclick="abrirHistorico()">
+                <span class="btn-icone">📊</span>
+                <span class="btn-texto">Histórico</span>
+            </button>
+            <button class="btn btn-grande btn-terciario" onclick="exportarTudo()">
+                <span class="btn-icone">📤</span>
+                <span class="btn-texto">Exportar Tudo (CSV)</span>
+            </button>
+        </div>
+
+        <div class="info-box">
+            <span class="info-icone">📁</span>
+            <p id="totalAvaliacoes">Nenhuma avaliação salva</p>
+        </div>
+    </div>
+</div>
+
+<!-- ========== TELA CONFIGURAÇÃO ========== -->
+<div id="telaConfig" class="tela">
+    <div class="container">
+        <div class="header-barra">
+            <button class="btn-voltar" onclick="voltarInicio()">‹ Voltar</button>
+            <h2>Nova Avaliação</h2>
+
+                <div class="header-spacer"></div>
+            </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>🏡</span> Identificação
+            </div>
+
+            <div class="card-body">
+                <div class="form-grupo">
+                    <label for="avaliador">Avaliador <span class="obrigatorio">*</span></label>
+                    <div class="select-wrapper">
+                        <select id="avaliador" onchange="toggleOutroAvaliador()">
+                            <option value="">Selecione...</option>
+                            <option value="Lucas da Silveira">Lucas da Silveira</option>
+                            <option value="Paulo Vitor Neiva">Paulo Vitor Neiva</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grupo" id="outroAvaliadorGroup" style="display:none;">
+                    <label for="outroAvaliador">Nome do Avaliador</label>
+                    <input type="text" id="outroAvaliador" placeholder="Digite o nome...">
+                </div>
+                <div class="form-grupo">
+                    <label for="fazenda">Fazenda <span class="obrigatorio">*</span></label>
+                    <div class="select-wrapper">
+                        <select id="fazenda" onchange="atualizarTalhoes()">
+                            <option value="">Selecione a fazenda...</option>
+                            <option value="Ponta da Mata">Ponta da Mata</option>
+                            <option value="Aliança">Aliança</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="talhao">Talhão <span class="obrigatorio">*</span></label>
+                    <div class="select-wrapper">
+                        <select id="talhao" disabled>
+                            <option value="">Selecione a fazenda primeiro...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="variedade">Variedade</label>
+                    <div class="select-wrapper">
+                        <select id="variedade">
+                            <option value="">Selecione...</option>
+                            <option value="catuai-144">Catuaí 144</option>
+                            <option value="catuai-62">Catuaí 62</option>
+                            <option value="mundo-novo">Mundo Novo</option>
+                            <option value="catuai-99">Catuaí 99</option>
+                            <option value="catucai-24-137">Catucaí 24/137</option>
+                            <option value="arara">Arara</option>
+                            <option value="topazio">Topázio</option>
+                            <option value="ibc-12">IBC 12</option>
+                            <option value="acaua-novo">Acauã Novo</option>
+                            <option value="outra">Outra</option>
+                        </select>
+
+                    </div>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="estadio">Estádio Fenológico</label>
+                    <div class="select-wrapper">
+                        <select id="estadio">
+                            <option value="">Selecione...</option>
+                            <option value="Vegetativo">Vegetativo</option>
+                            <option value="Pré-florada">Pré-florada</option>
+                            <option value="Florada">Florada</option>
+                            <option value="Chumbinho">Chumbinho</option>
+                            <option value="Expansão">Expansão</option>
+                            <option value="Granação">Granação</option>
+                            <option value="Maturação">Maturação</option>
+                            <option value="Pós-colheita">Pós-colheita</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>📍</span> Amostragem
+            </div>
+            <div class="card-body">
+                <!-- PONTO DESABILITADO
+        <div class="form-grupo">
+            <label for="pontoAmostragem">Ponto de Amostragem <span class="obrigatorio">*</span></label>
+            <input type="text" id="pontoAmostragem" placeholder="Ex: P1, P2..." value="P1">
+        </div>
+        FIM PONTO DESABILITADO -->
+
+                <div class="form-grupo">
+                    <label for="numPlantas">Nº de Plantas a Avaliar <span class="obrigatorio">*</span></label>
+                    <input type="number" id="numPlantas" value="10" min="1" max="50">
+                </div>
+            </div>
+            </div>
+
+            <button class="btn btn-grande btn-primario btn-iniciar" onclick="iniciarColeta()">
+                <span class="btn-icone">▶️</span>
+                <span class="btn-texto">Iniciar Avaliação</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== TELA COLETA ========== -->
+                <div id="telaColeta" class="tela">
+                    <div class="container">
+                        <div class="header-barra header-coleta-barra">
+                            <button class="btn-voltar" onclick="voltarConfig()">‹</button>
+                            <div class="header-info-coleta">
+                                <span id="infoFazendaTalhao" class="header-fazenda"></span>
+                            </div>
+                            <span id="infoPonto" class="badge-ponto">P1</span>
+                        </div>
+
+                        <div class="progresso-card">
+                            <div class="progresso-label">
+                                Planta <strong id="plantaAtualNum">1</strong> de <strong id="plantaTotalNum">10</strong>
+                            </div>
+                            <div class="barra-progresso">
+                                <div class="barra-preenchida" id="barraProgresso" style="width: 10%"></div>
+                            </div>
+                        </div>
+
+                        <!-- PRAGAS -->
+                        <div class="card card-secao">
+                            <div class="secao-titulo" onclick="toggleSecao('secaoPragas')">
+                                <span class="secao-icone">🐛</span>
+                                <span class="secao-nome">Pragas</span>
+                                <span class="seta" id="setaPragas">▼</span>
+                            </div>
+                            <div id="secaoPragas" class="secao-conteudo aberta">
+
+                                <div class="sub-header">Broca-do-café</div>
+                                <div class="campo-contador">
+                                    <label>Grãos broqueados (viva)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('brocaViva')">−</button>
+                                        <input type="number" id="brocaViva" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('brocaViva')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Grãos c/ broca morta</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('brocaMorta')">−</button>
+                                        <input type="number" id="brocaMorta" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('brocaMorta')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Total de grãos na amostra</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('totalGraos')">−</button>
+                                        <input type="number" id="totalGraos" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais btn-step" onclick="incrementar('totalGraos', 10)">+10</button>
+                                    </div>
+                                </div>
+
+                                <div class="sub-header">Bicho-mineiro</div>
+                                <div class="campo-contador">
+                                    <label>Adultos</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('bmAdulto')">−</button>
+                                        <input type="number" id="bmAdulto" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('bmAdulto')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Minas / Larvas</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('bmLarva')">−</button>
+                                        <input type="number" id="bmLarva" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('bmLarva')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Ovos</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('bmOvo')">−</button>
+                                        <input type="number" id="bmOvo" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('bmOvo')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Folhas com minas (3º/4º par)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('folhasMinas')">−</button>
+                                        <input type="number" id="folhasMinas" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('folhasMinas')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Total de folhas avaliadas</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('totalFolhas')">−</button>
+                                        <input type="number" id="totalFolhas" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais btn-step" onclick="incrementar('totalFolhas', 10)">+10</button>
+                                    </div>
+                                </div>
+
+                                <div class="sub-header">Outras pragas</div>
+                                <div class="campo-contador">
+                                    <label>Ácaro vermelho</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('acaroVerm')">−</button>
+                                        <input type="number" id="acaroVerm" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('acaroVerm')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Ácaro da leprose</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('acaroLepr')">−</button>
+                                        <input type="number" id="acaroLepr" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('acaroLepr')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Lagarta do café</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('lagarta')">−</button>
+                                        <input type="number" id="lagarta" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('lagarta')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Cochonilha</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('cochonilha')">−</button>
+                                        <input type="number" id="cochonilha" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('cochonilha')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Cigarras (ninfas/danos)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('cigarra')">−</button>
+                                        <input type="number" id="cigarra" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('cigarra')">+</button>
+                                    </div>
+                                </div>
+
+                                <div class="campo-custom-box">
+                                    <label class="custom-label">✏️ Outra praga:</label>
+                                    <input type="text" id="outraPragaNome" class="input-custom" placeholder="Nome da praga">
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('outraPragaQtd')">−</button>
+                                        <input type="number" id="outraPragaQtd" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('outraPragaQtd')">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DOENÇAS -->
+                        <div class="card card-secao">
+                            <div class="secao-titulo" onclick="toggleSecao('secaoDoencas')">
+                                <span class="secao-icone">🍂</span>
+                                <span class="secao-nome">Doenças</span>
+                                <span class="seta" id="setaDoencas">▶</span>
+                            </div>
+                            <div id="secaoDoencas" class="secao-conteudo">
+                                <div class="campo-contador">
+                                    <label>Ferrugem (folhas c/ pústulas)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('ferrugem')">−</button>
+                                        <input type="number" id="ferrugem" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('ferrugem')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Cercospora</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('cercospora')">−</button>
+                                        <input type="number" id="cercospora" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('cercospora')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Phoma</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('phoma')">−</button>
+                                        <input type="number" id="phoma" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('phoma')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Antracnose</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('antracnose')">−</button>
+                                        <input type="number" id="antracnose" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('antracnose')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Rizoctonia</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('rizoctonia')">−</button>
+                                        <input type="number" id="rizoctonia" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('rizoctonia')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Bacteriose (Mancha Aureolada)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('bacteriose')">−</button>
+                                        <input type="number" id="bacteriose" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('bacteriose')">+</button>
+                                    </div>
+                                </div>
+
+                                <div class="campo-custom-box">
+                                    <label class="custom-label">✏️ Outra doença:</label>
+                                    <input type="text" id="outraDoencaNome" class="input-custom" placeholder="Nome da doença">
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('outraDoencaQtd')">−</button>
+                                        <input type="number" id="outraDoencaQtd" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('outraDoencaQtd')">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- INIMIGOS NATURAIS -->
+                        <div class="card card-secao">
+                            <div class="secao-titulo" onclick="toggleSecao('secaoInimigos')">
+                                <span class="secao-icone">🐞</span>
+                                <span class="secao-nome">Inimigos Naturais</span>
+                                <span class="seta" id="setaInimigos">▶</span>
+                            </div>
+                            <div id="secaoInimigos" class="secao-conteudo">
+                                <div class="campo-contador">
+                                    <label>Joaninha</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('joaninha')">−</button>
+                                        <input type="number" id="joaninha" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('joaninha')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Vespa predadora</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('vespa')">−</button>
+                                        <input type="number" id="vespa" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('vespa')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Aranha</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('aranha')">−</button>
+                                        <input type="number" id="aranha" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('aranha')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Crisopídeo</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('crisopideo')">−</button>
+                                        <input type="number" id="crisopideo" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('crisopideo')">+</button>
+                                    </div>
+                                </div>
+                                <div class="campo-contador">
+                                    <label>Fungos (Beauveria / Metarhizium)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('fungosEntomo')">−</button>
+                                        <input type="number" id="fungosEntomo" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('fungosEntomo')">+</button>
+                                    </div>
+                                </div>
+
+                                <div class="campo-custom-box">
+                                    <label class="custom-label">✏️ Outro inimigo natural:</label>
+                                    <input type="text" id="outroInimigoNome" class="input-custom" placeholder="Nome">
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('outroInimigoQtd')">−</button>
+                                        <input type="number" id="outroInimigoQtd" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('outroInimigoQtd')">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OBSERVAÇÕES -->
+                        <div class="card card-secao">
+                            <div class="secao-titulo" onclick="toggleSecao('secaoObs')">
+                                <span class="secao-icone">📝</span>
+                                <span class="secao-nome">Observações</span>
+                                <span class="seta" id="setaObs">▶</span>
+                            </div>
+                            <div id="secaoObs" class="secao-conteudo">
+                                <textarea id="observacoes" rows="3" placeholder="Anotações sobre esta planta..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- BOTÕES AÇÃO -->
+                        <div class="acoes-coleta">
+                            <button class="btn btn-limpa" onclick="plantaLimpa()">
+                                ✅ Planta Limpa
+                            </button>
+                            <button class="btn btn-salvar" onclick="salvarPlanta()">
+                                💾 Salvar Planta
+                            </button>
+                        </div>
+
+                        <div class="espacador"></div>
+                    </div>
+                </div>
+
+                <!-- ========== TELA RESUMO ========== -->
+                <div id="telaResumo" class="tela">
+                    <div class="container">
+                        <div class="header-barra">
+                            <button class="btn-voltar" onclick="voltarInicio()">‹ Início</button>
+                            <h2>Resumo</h2>
+                            <div class="header-spacer"></div>
+                        </div>
+
+                        <div id="resumoConteudo"></div>
+
+                        <div class="acoes-lista">
+                            <button class="btn btn-grande btn-primario" onclick="novoPontoMesmoTalhao()">
+                                <span class="btn-icone">📍</span>
+                                <span class="btn-texto">Novo Ponto (mesmo talhão)</span>
+                            </button>
+                            <button class="btn btn-grande btn-whatsapp" onclick="compartilharWhatsApp()">
+                                <span class="btn-icone">📱</span>
+                                <span class="btn-texto">Compartilhar WhatsApp</span>
+                            </button>
+                            <button class="btn btn-grande btn-terciario" onclick="exportarCSV()">
+                                <span class="btn-icone">📤</span>
+                                <span class="btn-texto">Exportar CSV</span>
+                            </button>
+                            <button class="btn btn-grande btn-neutro" onclick="voltarInicio()">
+                                <span class="btn-icone">🏠</span>
+                                <span class="btn-texto">Voltar ao Início</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== TELA HISTÓRICO ========== -->
+                <div id="telaHistorico" class="tela">
+                    <div class="container">
+                        <div class="header-barra">
+                            <button class="btn-voltar" onclick="voltarInicio()">‹ Voltar</button>
+                            <h2>Histórico</h2>
+                            <div class="header-spacer"></div>
+                        </div>
+
+                        <div id="listaHistorico"></div>
+
+                        <div class="acoes-lista" style="margin-top:20px;">
+                            <button class="btn btn-grande btn-terciario" onclick="exportarTudo()">
+                                <span class="btn-icone">📤</span>
+                                <span class="btn-texto">Exportar Tudo (CSV)</span>
+                            </button>
+                            <button class="btn btn-grande btn-perigo" onclick="limparHistorico()">
+                                <span class="btn-icone">🗑️</span>
+                                <span class="btn-texto">Limpar Histórico</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <script src="app.js"></script>
+</body>
+</html>
