@@ -1,5 +1,5 @@
 /* ============================================
-   MIP CAFÉ v1.0 — JAVASCRIPT COMPLETO
+   MIP CAFÉ v1.0 — JAVASCRIPT COMPLETO (COM GPS)
    ============================================ */
 window.onerror = function (msg, url, linha, col, erro) {
     alert('ERRO: ' + msg + '\nLinha: ' + linha);
@@ -34,6 +34,8 @@ let avaliacaoAtual = {
     numPlantas: 10,
     plantaAtual: 1,
     dataInicio: null,
+    latitude: '',
+    longitude: '',
     plantas: []
 };
 
@@ -115,6 +117,32 @@ function atualizarTalhoes() {
 }
 
 // ============================================
+//   GEOLOCALIZAÇÃO (GPS)
+// ============================================
+function capturarGPS() {
+    if ("geolocation" in navigator) {
+        toast("📍 Obtendo localização...");
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                avaliacaoAtual.latitude = position.coords.latitude;
+                avaliacaoAtual.longitude = position.coords.longitude;
+                toast("✅ Localização salva!");
+            },
+            function(error) {
+                console.warn("Erro de GPS:", error.message);
+                avaliacaoAtual.latitude = "Não permitida/Erro";
+                avaliacaoAtual.longitude = "Não permitida/Erro";
+                toast("⚠️ GPS não capturado.");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    } else {
+        avaliacaoAtual.latitude = "Incompatível";
+        avaliacaoAtual.longitude = "Incompatível";
+    }
+}
+
+// ============================================
 //   INICIAR AVALIAÇÃO
 // ============================================
 
@@ -164,9 +192,13 @@ function iniciarColeta() {
         ponto, numPlantas,
         plantaAtual: 1,
         dataInicio: new Date().toISOString(),
+        latitude: 'Buscando...',
+        longitude: 'Buscando...',
         plantas: [],
         avaliador: getAvaliador(),
     };
+
+    capturarGPS(); // CHAMA O GPS AO INICIAR A COLETA
 
     atualizarTelaColeta();
     mostrarTela('telaColeta');
@@ -290,6 +322,8 @@ function finalizarAvaliacao() {
         estadio: avaliacaoAtual.estadio,
         ponto: avaliacaoAtual.ponto,
         numPlantas: avaliacaoAtual.numPlantas,
+        latitude: avaliacaoAtual.latitude,
+        longitude: avaliacaoAtual.longitude,
         dataInicio: avaliacaoAtual.dataInicio,
         dataFim: new Date().toISOString(),
         plantas: avaliacaoAtual.plantas,
@@ -313,6 +347,8 @@ function enviarParaGoogleSheets(avaliacao) {
         talhao: avaliacao.talhao,
         variedade: avaliacao.variedade,
         estadio: avaliacao.estadio,
+        latitude: avaliacao.latitude || 'Sem GPS',
+        longitude: avaliacao.longitude || 'Sem GPS',
         plantas: avaliacao.plantas.map(p => ({
             numero: p.numero,
             brocaViva: p.brocaViva || 0,
@@ -333,7 +369,7 @@ function enviarParaGoogleSheets(avaliacao) {
 
     fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'no-cors', // MANTIDO CONFORME SUA VERSÃO
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     })
@@ -408,6 +444,14 @@ function exibirResumo(av) {
     const plantasLimpas = av.plantas.filter(p => p.limpa).length;
     const dataFormatada = formatarData(av.dataInicio);
 
+    // Tratamento visual para o GPS
+    let gpsStatus = 'Não capturado';
+    if (av.latitude && typeof av.latitude === 'number') {
+        gpsStatus = `${av.latitude.toFixed(5)}, ${av.longitude.toFixed(5)}`;
+    } else if (av.latitude) {
+        gpsStatus = av.latitude;
+    }
+
     // Status de sincronização
     const syncStatus = av.sincronizado === true ? '☁️ Sincronizado' : 
                        av.sincronizado === false ? '⚠️ Pendente' : '';
@@ -422,6 +466,7 @@ function exibirResumo(av) {
     h += ri('Talhão', av.talhao);
     h += ri('Variedade', av.variedade || '—');
     h += ri('Estádio', av.estadio || '—');
+    h += ri('📍 GPS', gpsStatus); // MOSTRA O GPS NO RESUMO
     h += ri('Plantas avaliadas', n);
     h += ri('Plantas limpas', `${plantasLimpas} (${((plantasLimpas/n)*100).toFixed(0)}%)`, 'ok');
     if (syncStatus) h += ri('Nuvem', syncStatus);
@@ -643,6 +688,7 @@ function compartilharWhatsApp() {
     m += `👤 *Avaliador:* ${av.avaliador || '—'}\n`;
     m += `🏡 *${av.fazenda}* — *${av.talhao}*\n`;
     m += `🌱 ${av.variedade || '—'} · ${av.estadio || '—'}\n`;
+    m += `📍 *GPS:* ${av.latitude || 'Não capturado'}, ${av.longitude || ''}\n`; // ADICIONADO AO WHATSAPP
     m += `🌱 ${n} plantas avaliadas\n`;
     m += `✅ Limpas: ${limpas} (${((limpas/n)*100).toFixed(0)}%)\n\n`;
     m += `*🐛 BROCA:* ${pctB}% (viva)\n`;
