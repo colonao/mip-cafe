@@ -1,5 +1,5 @@
 /* ============================================
-   MIP CAFÉ v1.0 — JAVASCRIPT COMPLETO (COM GPS)
+   MIP CAFÉ v1.0 — JAVASCRIPT COMPLETO (COM GPS POR PLANTA)
    ============================================ */
 window.onerror = function (msg, url, linha, col, erro) {
     alert('ERRO: ' + msg + '\nLinha: ' + linha);
@@ -34,8 +34,6 @@ let avaliacaoAtual = {
     numPlantas: 10,
     plantaAtual: 1,
     dataInicio: null,
-    latitude: '',
-    longitude: '',
     plantas: []
 };
 
@@ -119,33 +117,31 @@ function atualizarTalhoes() {
 // ============================================
 //   GEOLOCALIZAÇÃO (GPS)
 // ============================================
-function capturarGPS() {
-    if ("geolocation" in navigator) {
-        toast("📍 Obtendo localização...");
+function obterCoordenadasPlanta() {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+            resolve({ lat: "Sem suporte", lng: "Sem suporte" });
+            return;
+        }
+        
         navigator.geolocation.getCurrentPosition(
-            function(position) {
-                avaliacaoAtual.latitude = position.coords.latitude;
-                avaliacaoAtual.longitude = position.coords.longitude;
-                toast("✅ Localização salva!");
+            (posicao) => {
+                resolve({ 
+                    lat: posicao.coords.latitude, 
+                    lng: posicao.coords.longitude 
+                });
             },
-            function(error) {
-                console.warn("Erro de GPS:", error.message);
-                avaliacaoAtual.latitude = "Não permitida/Erro";
-                avaliacaoAtual.longitude = "Não permitida/Erro";
-                toast("⚠️ GPS não capturado.");
+            (erro) => {
+                resolve({ lat: "Erro/Negado", lng: "Erro/Negado" });
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 } 
         );
-    } else {
-        avaliacaoAtual.latitude = "Incompatível";
-        avaliacaoAtual.longitude = "Incompatível";
-    }
+    });
 }
 
 // ============================================
 //   INICIAR AVALIAÇÃO
 // ============================================
-
 function toggleOutroAvaliador() {
     const sel = document.getElementById('avaliador');
     const grupo = document.getElementById('outroAvaliadorGroup');
@@ -192,13 +188,9 @@ function iniciarColeta() {
         ponto, numPlantas,
         plantaAtual: 1,
         dataInicio: new Date().toISOString(),
-        latitude: 'Buscando...',
-        longitude: 'Buscando...',
         plantas: [],
         avaliador: getAvaliador(),
     };
-
-    capturarGPS(); // CHAMA O GPS AO INICIAR A COLETA
 
     atualizarTelaColeta();
     mostrarTela('telaColeta');
@@ -266,7 +258,7 @@ function toggleSecao(id) {
 }
 
 // ============================================
-//   SALVAR PLANTA
+//   SALVAR PLANTA (COM GPS)
 // ============================================
 function coletarDadosPlanta() {
     const dados = {};
@@ -295,12 +287,33 @@ function salvarPlanta() {
     salvarDadosPlanta(dados);
 }
 
-function salvarDadosPlanta(dados) {
+// Transformada em ASYNC para aguardar o GPS
+async function salvarDadosPlanta(dados) {
+    // Bloqueia os botões para evitar clique duplo
+    const botoesAcao = document.querySelectorAll('#telaColeta .botoes-acao button');
+    botoesAcao.forEach(b => {
+        b.dataset.textoAntigo = b.innerText;
+        b.innerText = "📍 GPS...";
+        b.disabled = true;
+    });
+
+    // Captura as coordenadas
+    const coords = await obterCoordenadasPlanta();
+
+    // Atribui ao objeto da planta
+    dados.latitude = coords.lat;
+    dados.longitude = coords.lng;
     dados.numero = avaliacaoAtual.plantaAtual;
     dados.timestamp = new Date().toISOString();
+    
     avaliacaoAtual.plantas.push(dados);
-
     toast(`✅ Planta ${dados.numero} salva!`);
+
+    // Libera os botões de volta
+    botoesAcao.forEach(b => {
+        b.innerText = b.dataset.textoAntigo;
+        b.disabled = false;
+    });
 
     if (avaliacaoAtual.plantaAtual >= avaliacaoAtual.numPlantas) {
         finalizarAvaliacao();
@@ -322,8 +335,6 @@ function finalizarAvaliacao() {
         estadio: avaliacaoAtual.estadio,
         ponto: avaliacaoAtual.ponto,
         numPlantas: avaliacaoAtual.numPlantas,
-        latitude: avaliacaoAtual.latitude,
-        longitude: avaliacaoAtual.longitude,
         dataInicio: avaliacaoAtual.dataInicio,
         dataFim: new Date().toISOString(),
         plantas: avaliacaoAtual.plantas,
@@ -347,9 +358,9 @@ function enviarParaGoogleSheets(avaliacao) {
         talhao: avaliacao.talhao,
         variedade: avaliacao.variedade,
         estadio: avaliacao.estadio,
-        latitude: avaliacao.latitude || 'Sem GPS',
-        longitude: avaliacao.longitude || 'Sem GPS',
         plantas: avaliacao.plantas.map(p => ({
+            latitude: p.latitude || 'Sem GPS',    // GPS AQUI AGORA
+            longitude: p.longitude || 'Sem GPS',  // GPS AQUI AGORA
             numero: p.numero,
             brocaViva: p.brocaViva || 0,
             brocaMorta: p.brocaMorta || 0,
@@ -369,7 +380,7 @@ function enviarParaGoogleSheets(avaliacao) {
 
     fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
-        mode: 'no-cors', // MANTIDO CONFORME SUA VERSÃO
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     })
@@ -444,21 +455,19 @@ function exibirResumo(av) {
     const plantasLimpas = av.plantas.filter(p => p.limpa).length;
     const dataFormatada = formatarData(av.dataInicio);
 
-    // Tratamento visual para o GPS
+    // Pegar o GPS da primeira planta como referência para o resumo
     let gpsStatus = 'Não capturado';
-    if (av.latitude && typeof av.latitude === 'number') {
-        gpsStatus = `${av.latitude.toFixed(5)}, ${av.longitude.toFixed(5)}`;
-    } else if (av.latitude) {
-        gpsStatus = av.latitude;
+    if (av.plantas.length > 0 && typeof av.plantas[0].latitude === 'number') {
+        gpsStatus = `${av.plantas[0].latitude.toFixed(5)}, ${av.plantas[0].longitude.toFixed(5)} (1ª Planta)`;
+    } else if (av.plantas.length > 0 && av.plantas[0].latitude) {
+        gpsStatus = av.plantas[0].latitude;
     }
 
-    // Status de sincronização
     const syncStatus = av.sincronizado === true ? '☁️ Sincronizado' : 
                        av.sincronizado === false ? '⚠️ Pendente' : '';
 
     let h = '';
 
-    // Info Geral
     h += `<div class="resumo-card"><h3>📋 Informações Gerais</h3>`;
     h += ri('Data', dataFormatada);
     h += ri('Avaliador', av.avaliador || '—');
@@ -466,13 +475,12 @@ function exibirResumo(av) {
     h += ri('Talhão', av.talhao);
     h += ri('Variedade', av.variedade || '—');
     h += ri('Estádio', av.estadio || '—');
-    h += ri('📍 GPS', gpsStatus); // MOSTRA O GPS NO RESUMO
+    h += ri('📍 GPS Ref.', gpsStatus); 
     h += ri('Plantas avaliadas', n);
     h += ri('Plantas limpas', `${plantasLimpas} (${((plantasLimpas/n)*100).toFixed(0)}%)`, 'ok');
     if (syncStatus) h += ri('Nuvem', syncStatus);
     h += `</div>`;
 
-    // Broca
     h += `<div class="resumo-card"><h3>🐛 Broca-do-café</h3>`;
     h += ri('Grãos amostrados', totalGraos);
     h += ri('Broqueados (viva)', totalBrocaViva);
@@ -482,7 +490,6 @@ function exibirResumo(av) {
     h += ri('% Infestação total', pctBrocaTotal + '%', parseFloat(pctBrocaTotal) > 5 ? 'alerta' : 'ok');
     h += `</div>`;
 
-    // Bicho-mineiro
     h += `<div class="resumo-card"><h3>🐛 Bicho-mineiro</h3>`;
     h += ri('Adultos (média/planta)', media('bmAdulto'));
     h += ri('Minas/larvas (média)', media('bmLarva'));
@@ -493,7 +500,6 @@ function exibirResumo(av) {
     h += ri('Incidência (plantas c/ BM)', incidencia('bmLarva') + '%');
     h += `</div>`;
 
-    // Outras pragas
     h += `<div class="resumo-card"><h3>🐛 Outras Pragas</h3>`;
     h += ri('Ácaro vermelho (média)', media('acaroVerm'));
     h += ri('Ácaro da leprose (média)', media('acaroLepr'));
@@ -504,7 +510,6 @@ function exibirResumo(av) {
     if (pragaC) h += ri(pragaC.outraPragaNome + ' (média)', media('outraPragaQtd'));
     h += `</div>`;
 
-    // Doenças
     h += `<div class="resumo-card"><h3>🍂 Doenças (incidência)</h3>`;
     h += ri('Ferrugem', incidencia('ferrugem') + '%', parseInt(incidencia('ferrugem')) > 5 ? 'alerta' : 'ok');
     h += ri('Cercospora', incidencia('cercospora') + '%');
@@ -516,7 +521,6 @@ function exibirResumo(av) {
     if (doencaC) h += ri(doencaC.outraDoencaNome, incidencia('outraDoencaQtd') + '%');
     h += `</div>`;
 
-    // Inimigos
     h += `<div class="resumo-card"><h3>🐞 Inimigos Naturais (total)</h3>`;
     h += ri('Joaninha', soma('joaninha'), 'ok');
     h += ri('Vespa predadora', soma('vespa'), 'ok');
@@ -530,7 +534,6 @@ function exibirResumo(av) {
     document.getElementById('resumoConteudo').innerHTML = h;
 }
 
-// Helper para item do resumo
 function ri(rotulo, valor, cls) {
     const clsStr = cls ? ` ${cls}` : '';
     return `<div class="resumo-item"><span class="rotulo">${rotulo}</span><span class="valor${clsStr}">${valor}</span></div>`;
@@ -610,7 +613,7 @@ function exportarTudo() {
     const hist = getHistorico();
     if (hist.length === 0) { toast('Nenhum dado para exportar'); return; }
 
-    let csv = 'Avaliador;Fazenda;Talhão;Variedade;Estádio;Planta;Data;';
+    let csv = 'Avaliador;Fazenda;Talhão;Variedade;Estádio;Latitude;Longitude;Planta;Data;';
     csv += 'Broca Viva;Broca Morta;Total Grãos;';
     csv += 'BM Adulto;BM Larva;BM Ovo;Folhas Minas;Total Folhas;';
     csv += 'Ácaro Verm;Ácaro Lepr;Lagarta;Cochonilha;Cigarra;Outra Praga;Outra Praga Qtd;';
@@ -620,7 +623,7 @@ function exportarTudo() {
 
     hist.forEach(av => {
         av.plantas.forEach(p => {
-            csv += `${av.avaliador||''};${av.fazenda};${av.talhao};${av.variedade};${av.estadio};${p.numero};${formatarData(p.timestamp)};`;
+            csv += `${av.avaliador||''};${av.fazenda};${av.talhao};${av.variedade};${av.estadio};${p.latitude||''};${p.longitude||''};${p.numero};${formatarData(p.timestamp)};`;
             csv += `${p.brocaViva};${p.brocaMorta};${p.totalGraos};`;
             csv += `${p.bmAdulto};${p.bmLarva};${p.bmOvo};${p.folhasMinas};${p.totalFolhas};`;
             csv += `${p.acaroVerm};${p.acaroLepr};${p.lagarta};${p.cochonilha||0};${p.cigarra||0};${p.outraPragaNome||''};${p.outraPragaQtd};`;
@@ -634,14 +637,14 @@ function exportarTudo() {
 }
 
 function gerarCSVUnico(av) {
-    let csv = 'Planta;Broca Viva;Broca Morta;Total Grãos;';
+    let csv = 'Latitude;Longitude;Planta;Broca Viva;Broca Morta;Total Grãos;';
     csv += 'BM Adulto;BM Larva;BM Ovo;Folhas Minas;Total Folhas;';
     csv += 'Ácaro Verm;Ácaro Lepr;Lagarta;Cochonilha;Cigarra;';
     csv += 'Ferrugem;Cercospora;Phoma;Antracnose;Rizoctonia;Bacteriose;';
     csv += 'Joaninha;Vespa;Aranha;Crisopídeo;Fungos;Obs;Limpa\n';
 
     av.plantas.forEach(p => {
-        csv += `${p.numero};${p.brocaViva};${p.brocaMorta};${p.totalGraos};`;
+        csv += `${p.latitude||''};${p.longitude||''};${p.numero};${p.brocaViva};${p.brocaMorta};${p.totalGraos};`;
         csv += `${p.bmAdulto};${p.bmLarva};${p.bmOvo};${p.folhasMinas};${p.totalFolhas};`;
         csv += `${p.acaroVerm};${p.acaroLepr};${p.lagarta};${p.cochonilha||0};${p.cigarra||0};`;
         csv += `${p.ferrugem};${p.cercospora};${p.phoma};${p.antracnose};${p.rizoctonia};${p.bacteriose};`;
@@ -683,13 +686,16 @@ function compartilharWhatsApp() {
     const pctBM = tF > 0 ? ((soma('folhasMinas') / tF) * 100).toFixed(1) : '0.0';
     const limpas = av.plantas.filter(p => p.limpa).length;
 
+    const latRef = av.plantas[0] ? av.plantas[0].latitude : 'Sem GPS';
+    const lngRef = av.plantas[0] ? av.plantas[0].longitude : '';
+
     let m = `☕ *MIP CAFÉ — Relatório*\n`;
     m += `📅 ${formatarData(av.dataInicio)}\n`;
     m += `👤 *Avaliador:* ${av.avaliador || '—'}\n`;
     m += `🏡 *${av.fazenda}* — *${av.talhao}*\n`;
     m += `🌱 ${av.variedade || '—'} · ${av.estadio || '—'}\n`;
-    m += `📍 *GPS:* ${av.latitude || 'Não capturado'}, ${av.longitude || ''}\n`; // ADICIONADO AO WHATSAPP
-    m += `🌱 ${n} plantas avaliadas\n`;
+    m += `📍 *GPS (Ref. 1ª Planta):* ${latRef}, ${lngRef}\n`;
+    m += `🌱 ${n} plantas avaliadas (GPS individual na planilha)\n`;
     m += `✅ Limpas: ${limpas} (${((limpas/n)*100).toFixed(0)}%)\n\n`;
     m += `*🐛 BROCA:* ${pctB}% (viva)\n`;
     m += `*🐛 BICHO-MINEIRO:* ${pctBM}% folhas\n`;
@@ -733,3 +739,4 @@ function toast(msg) {
 document.addEventListener('DOMContentLoaded', () => {
     atualizarContador();
 });
+
