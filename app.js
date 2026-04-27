@@ -50,7 +50,8 @@ const CAMPOS_DOENCAS = [
 const CAMPOS_INIMIGOS = [
     'joaninha', 'vespa', 'aranha', 'crisopideo', 'fungosEntomo', 'outroInimigoQtd'
 ];
-const TODOS_CAMPOS = [...CAMPOS_PRAGAS, ...CAMPOS_DOENCAS, ...CAMPOS_INIMIGOS];
+const CAMPOS_PLANTA = ['desfolha'];
+const TODOS_CAMPOS = [...CAMPOS_PRAGAS, ...CAMPOS_DOENCAS, ...CAMPOS_INIMIGOS, ...CAMPOS_PLANTA];
 
 // ============================================
 //   NAVEGAÇÃO
@@ -229,9 +230,11 @@ function limparCamposColeta() {
 // ============================================
 //   CONTADORES
 // ============================================
-function incrementar(id, passo = 1) {
+function incrementar(id, passo = 1, max = null) {
     const el = document.getElementById(id);
-    el.value = parseInt(el.value) + passo;
+    let val = parseInt(el.value) + passo;
+    if (max !== null && val > max) val = max;
+    el.value = val;
     vibrar();
 }
 
@@ -374,6 +377,10 @@ function enviarParaGoogleSheets(avaliacao) {
             ferrugem: p.ferrugem || 0,
             cercospora: p.cercospora || 0,
             phoma: p.phoma || 0,
+            antracnose: p.antracnose || 0,
+            rizoctonia: p.rizoctonia || 0,
+            bacteriose: p.bacteriose || 0,
+            desfolha: p.desfolha || 0,
             observacoes: p.observacoes || ''
         }))
     };
@@ -381,7 +388,7 @@ function enviarParaGoogleSheets(avaliacao) {
     fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
     })
     .then(() => {
@@ -510,15 +517,17 @@ function exibirResumo(av) {
     if (pragaC) h += ri(pragaC.outraPragaNome + ' (média)', media('outraPragaQtd'));
     h += `</div>`;
 
-    h += `<div class="resumo-card"><h3>🍂 Doenças (incidência)</h3>`;
-    h += ri('Ferrugem', incidencia('ferrugem') + '%', parseInt(incidencia('ferrugem')) > 5 ? 'alerta' : 'ok');
-    h += ri('Cercospora', incidencia('cercospora') + '%');
-    h += ri('Phoma', incidencia('phoma') + '%');
-    h += ri('Antracnose', incidencia('antracnose') + '%');
-    h += ri('Rizoctonia', incidencia('rizoctonia') + '%');
-    h += ri('Bacteriose', incidencia('bacteriose') + '%');
+    h += `<div class="resumo-card"><h3>🍂 Doenças (Média Notas 0 a 5)</h3>`;
+    h += ri('Ferrugem', media('ferrugem'), parseFloat(media('ferrugem')) > 1 ? 'alerta' : 'ok');
+    h += ri('Cercospora', media('cercospora'));
+    h += ri('Phoma', media('phoma'));
+    h += ri('Antracnose', media('antracnose'));
+    h += ri('Rizoctonia', media('rizoctonia'));
+    h += ri('Bacteriose', media('bacteriose'));
     const doencaC = av.plantas.find(p => p.outraDoencaNome);
-    if (doencaC) h += ri(doencaC.outraDoencaNome, incidencia('outraDoencaQtd') + '%');
+    if (doencaC) h += ri(doencaC.outraDoencaNome, media('outraDoencaQtd'));
+    h += `<div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;"></div>`;
+    h += ri('Desfolha da planta', media('desfolha'));
     h += `</div>`;
 
     h += `<div class="resumo-card"><h3>🐞 Inimigos Naturais (total)</h3>`;
@@ -617,7 +626,7 @@ function exportarTudo() {
     csv += 'Broca Viva;Broca Morta;Total Grãos;';
     csv += 'BM Adulto;BM Larva;BM Ovo;Folhas Minas;Total Folhas;';
     csv += 'Ácaro Verm;Ácaro Lepr;Lagarta;Cochonilha;Cigarra;Outra Praga;Outra Praga Qtd;';
-    csv += 'Ferrugem;Cercospora;Phoma;Antracnose;Rizoctonia;Bacteriose;Outra Doença;Outra Doença Qtd;';
+    csv += 'Ferrugem;Cercospora;Phoma;Antracnose;Rizoctonia;Bacteriose;Outra Doença;Outra Doença Qtd;Desfolha;';
     csv += 'Joaninha;Vespa;Aranha;Crisopídeo;Fungos;Outro Inimigo;Outro Inimigo Qtd;';
     csv += 'Observações;Planta Limpa\n';
 
@@ -627,7 +636,7 @@ function exportarTudo() {
             csv += `${p.brocaViva};${p.brocaMorta};${p.totalGraos};`;
             csv += `${p.bmAdulto};${p.bmLarva};${p.bmOvo};${p.folhasMinas};${p.totalFolhas};`;
             csv += `${p.acaroVerm};${p.acaroLepr};${p.lagarta};${p.cochonilha||0};${p.cigarra||0};${p.outraPragaNome||''};${p.outraPragaQtd};`;
-            csv += `${p.ferrugem};${p.cercospora};${p.phoma};${p.antracnose};${p.rizoctonia};${p.bacteriose};${p.outraDoencaNome||''};${p.outraDoencaQtd};`;
+            csv += `${p.ferrugem};${p.cercospora};${p.phoma};${p.antracnose};${p.rizoctonia};${p.bacteriose};${p.outraDoencaNome||''};${p.outraDoencaQtd};${p.desfolha||0};`;
             csv += `${p.joaninha};${p.vespa};${p.aranha};${p.crisopideo};${p.fungosEntomo};${p.outroInimigoNome||''};${p.outroInimigoQtd};`;
             csv += `${(p.observacoes||'').replace(/;/g,',')};${p.limpa?'Sim':'Não'}\n`;
         });
@@ -640,14 +649,14 @@ function gerarCSVUnico(av) {
     let csv = 'Latitude;Longitude;Planta;Broca Viva;Broca Morta;Total Grãos;';
     csv += 'BM Adulto;BM Larva;BM Ovo;Folhas Minas;Total Folhas;';
     csv += 'Ácaro Verm;Ácaro Lepr;Lagarta;Cochonilha;Cigarra;';
-    csv += 'Ferrugem;Cercospora;Phoma;Antracnose;Rizoctonia;Bacteriose;';
+    csv += 'Ferrugem;Cercospora;Phoma;Antracnose;Rizoctonia;Bacteriose;Desfolha;';
     csv += 'Joaninha;Vespa;Aranha;Crisopídeo;Fungos;Obs;Limpa\n';
 
     av.plantas.forEach(p => {
         csv += `${p.latitude||''};${p.longitude||''};${p.numero};${p.brocaViva};${p.brocaMorta};${p.totalGraos};`;
         csv += `${p.bmAdulto};${p.bmLarva};${p.bmOvo};${p.folhasMinas};${p.totalFolhas};`;
         csv += `${p.acaroVerm};${p.acaroLepr};${p.lagarta};${p.cochonilha||0};${p.cigarra||0};`;
-        csv += `${p.ferrugem};${p.cercospora};${p.phoma};${p.antracnose};${p.rizoctonia};${p.bacteriose};`;
+        csv += `${p.ferrugem};${p.cercospora};${p.phoma};${p.antracnose};${p.rizoctonia};${p.bacteriose};${p.desfolha||0};`;
         csv += `${p.joaninha};${p.vespa};${p.aranha};${p.crisopideo};${p.fungosEntomo};`;
         csv += `${(p.observacoes||'').replace(/;/g,',')};${p.limpa?'Sim':'Não'}\n`;
     });
@@ -700,9 +709,10 @@ function compartilharWhatsApp() {
     m += `*🐛 BROCA:* ${pctB}% (viva)\n`;
     m += `*🐛 BICHO-MINEIRO:* ${pctBM}% folhas\n`;
     m += `Minas média: ${media('bmLarva')}/planta\n\n`;
-    m += `*🍂 DOENÇAS:*\n`;
-    m += `Ferrugem: ${incidencia('ferrugem')}%\n`;
-    m += `Cercospora: ${incidencia('cercospora')}%\n\n`;
+    m += `*🍂 DOENÇAS (Nota média):*\n`;
+    m += `Ferrugem: ${media('ferrugem')}\n`;
+    m += `Cercospora: ${media('cercospora')}\n`;
+    m += `Desfolha: ${media('desfolha')}\n\n`;
     m += `*🐞 INIMIGOS NATURAIS:*\n`;
     m += `Joaninha: ${soma('joaninha')} · Vespa: ${soma('vespa')} · Aranha: ${soma('aranha')}`;
 

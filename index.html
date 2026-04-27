@@ -320,61 +320,80 @@
                             </div>
                             <div id="secaoDoencas" class="secao-conteudo">
                                 <div class="campo-contador">
-                                    <label>Ferrugem (folhas c/ pústulas)</label>
+                                    <label>Ferrugem (Nota 0 a 5)</label>
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('ferrugem')">−</button>
                                         <input type="number" id="ferrugem" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('ferrugem')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('ferrugem', 1, 5)">+</button>
                                     </div>
                                 </div>
                                 <div class="campo-contador">
-                                    <label>Cercospora</label>
+                                    <label>Cercospora (Nota 0 a 5)</label>
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('cercospora')">−</button>
                                         <input type="number" id="cercospora" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('cercospora')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('cercospora', 1, 5)">+</button>
                                     </div>
                                 </div>
                                 <div class="campo-contador">
-                                    <label>Phoma</label>
+                                    <label>Phoma (Nota 0 a 5)</label>
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('phoma')">−</button>
                                         <input type="number" id="phoma" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('phoma')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('phoma', 1, 5)">+</button>
                                     </div>
                                 </div>
                                 <div class="campo-contador">
-                                    <label>Antracnose</label>
+                                    <label>Antracnose (Nota 0 a 5)</label>
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('antracnose')">−</button>
                                         <input type="number" id="antracnose" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('antracnose')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('antracnose', 1, 5)">+</button>
                                     </div>
                                 </div>
                                 <div class="campo-contador">
-                                    <label>Rizoctonia</label>
+                                    <label>Rizoctonia (Nota 0 a 5)</label>
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('rizoctonia')">−</button>
                                         <input type="number" id="rizoctonia" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('rizoctonia')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('rizoctonia', 1, 5)">+</button>
                                     </div>
                                 </div>
                                 <div class="campo-contador">
-                                    <label>Bacteriose (Mancha Aureolada)</label>
+                                    <label>Bacteriose (Nota 0 a 5)</label>
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('bacteriose')">−</button>
                                         <input type="number" id="bacteriose" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('bacteriose')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('bacteriose', 1, 5)">+</button>
                                     </div>
                                 </div>
 
                                 <div class="campo-custom-box">
-                                    <label class="custom-label">✏️ Outra doença:</label>
+                                    <label class="custom-label">✏️ Outra doença (Nota 0 a 5):</label>
                                     <input type="text" id="outraDoencaNome" class="input-custom" placeholder="Nome da doença">
                                     <div class="controles">
                                         <button class="btn-ct btn-menos" onclick="decrementar('outraDoencaQtd')">−</button>
                                         <input type="number" id="outraDoencaQtd" value="0" min="0" readonly>
-                                        <button class="btn-ct btn-mais" onclick="incrementar('outraDoencaQtd')">+</button>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('outraDoencaQtd', 1, 5)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CONDIÇÃO DA PLANTA -->
+                        <div class="card card-secao">
+                            <div class="secao-titulo" onclick="toggleSecao('secaoPlanta')">
+                                <span class="secao-icone">🌱</span>
+                                <span class="secao-nome">Condição da Planta</span>
+                                <span class="seta" id="setaPlanta">▶</span>
+                            </div>
+                            <div id="secaoPlanta" class="secao-conteudo">
+                                <div class="campo-contador">
+                                    <label>Desfolha da planta (Nota 0 a 5)</label>
+                                    <div class="controles">
+                                        <button class="btn-ct btn-menos" onclick="decrementar('desfolha')">−</button>
+                                        <input type="number" id="desfolha" value="0" min="0" readonly>
+                                        <button class="btn-ct btn-mais" onclick="incrementar('desfolha', 1, 5)">+</button>
                                     </div>
                                 </div>
                             </div>
